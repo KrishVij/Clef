@@ -25,6 +25,7 @@ static int my_Callback( const void *inputBuffer, void *outputBuffer,
 
   my_data *data = (my_data *)userData;
   float *output = (float *) outputBuffer;
+  float *new_output = (float *) outputBuffer;
 
   (void) timeInfo; 
   (void) statusFlags;
@@ -36,7 +37,8 @@ static int my_Callback( const void *inputBuffer, void *outputBuffer,
 
     float time_in_seconds =  (float)(data -> current_sample_index)/(float)(data -> sample_rate);
 
-    *output++ = 1.0 * sin(2 * M_PI * 1.0 * time_in_seconds + 0.0);
+    *output = 1.0 * sin(2 * M_PI * 1.0 * time_in_seconds + 0.0);
+    *new_output++ = (*output) + (float)(2.0 * sin(2 * M_PI * 1.0 * time_in_seconds + 0.0));
 
     data -> current_sample_index++;
 
