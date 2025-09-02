@@ -9,6 +9,7 @@
 #endif
 
 #define NUM_SECONDS (4)
+#define FREQUENCY (440.0)
 
 typedef struct
 {
@@ -26,6 +27,9 @@ static int my_Callback( const void *inputBuffer, void *outputBuffer,
   my_data *data = (my_data *)userData;
   float *output = (float *) outputBuffer;
   float *new_output = (float *) outputBuffer;
+  float left_phase;
+  float right_phase;
+  float *new_phase_output =  (float *) outputBuffer;
 
   (void) timeInfo; 
   (void) statusFlags;
@@ -37,8 +41,16 @@ static int my_Callback( const void *inputBuffer, void *outputBuffer,
 
     float time_in_seconds =  (float)(data -> current_sample_index)/(float)(data -> sample_rate);
 
-    *output = 1.0 * sin(2 * M_PI * 1.0 * time_in_seconds + 0.0);
-    *new_output++ = (*output) + (float)(2.0 * sin(2 * M_PI * 1.0 * time_in_seconds + 0.0));
+    /* *output++ = (float)(i) * sin(2 * M_PI * FREQUENCY * time_in_seconds + 0.0);   */
+    
+    /* left_phase = 1.0 * sin(2 * M_PI * 440.0 * time_in_seconds + 0.0); */
+    /* right_phase = 1.0 * sin(2 * M_PI * 440.0 * time_in_seconds - (M_PI)); */
+    /* *new_phase_output++ = left_phase; */
+    /* *new_phase_output++ = right_phase; */
+    
+    /* *new_output++ = (*output) + (float)(i + 100 * sin(2 * M_PI * (FREQUENCY * 2) * time_in_seconds + M_PI)); */
+
+    *output++ = 1.0 * sin(2 * M_PI * FREQUENCY * time_in_seconds + 0.0) + 2.0 * sin(2 * M_PI * (FREQUENCY * 2) * time_in_seconds + (M_PI/2)) + 50.0 * sin(2 * M_PI * (FREQUENCY * 3) * time_in_seconds - (M_PI/4));
 
     data -> current_sample_index++;
 
@@ -127,5 +139,5 @@ int main()
   }
 
   Pa_Terminate();
-  puts(" Tune Played ");
+  puts("Tune Played\n");
 }
