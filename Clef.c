@@ -10,11 +10,14 @@
 
 #define NUM_SECONDS (4)
 #define FREQUENCY (440.0)
+#define TABLE_SIZE (200)
+#define SAMPLE_RATE (44100)
 
 typedef struct
 {
-  int sample_rate;
-  unsigned long current_sample_index;
+  float sine_table[TABLE_SIZE];
+  int left_phase;
+  int right_phase;
 }my_data;
 
 static int my_Callback( const void *inputBuffer, void *outputBuffer,
@@ -26,10 +29,10 @@ static int my_Callback( const void *inputBuffer, void *outputBuffer,
 
   my_data *data = (my_data *)userData;
   float *output = (float *) outputBuffer;
-  float *new_output = (float *) outputBuffer;
-  float left_phase;
-  float right_phase;
-  float *new_phase_output =  (float *) outputBuffer;
+  /* float *new_output = (float *) outputBuffer; */
+  /* float left_phase; */
+  /* float right_phase; */
+  /* float *new_phase_output =  (float *) outputBuffer; */
 
   (void) timeInfo; 
   (void) statusFlags;
@@ -37,24 +40,28 @@ static int my_Callback( const void *inputBuffer, void *outputBuffer,
 
   unsigned long i;
 
-  for (i = 0; i < framesPerBuffer; i++) {
+  for (i = 0; i < framesPerBuffer; i++)
+    {
+      float left_sample = 0.0f;
+      left_sample += 0.5f * data->sine_table[data->left_phase];           
+      left_sample += 0.3f * data->sine_table[(data->left_phase * 2) % TABLE_SIZE];  
+      left_sample += 0.2f * data->sine_table[(data->left_phase * 3) % TABLE_SIZE];  
 
-    float time_in_seconds =  (float)(data -> current_sample_index)/(float)(data -> sample_rate);
+      float right_sample = 0.0f;
+      right_sample += 0.4f * data->sine_table[data->right_phase];          
+      right_sample += 0.4f * data->sine_table[(data->right_phase * 3) % TABLE_SIZE];
+      right_sample += 0.2f * data->sine_table[(data->right_phase * 5) % TABLE_SIZE]; 
+      
+      /* *output++ = data->sine_table[data->left_phase];  */
+      /* *output++ = data->sine_table[data->right_phase]; */
+      *output++ = left_sample;
+      *output++ = right_sample;
+      data->left_phase += 1;
+      if( data->left_phase >= TABLE_SIZE ) data->left_phase -= TABLE_SIZE;
+        data->right_phase += 3; /* higher pitch so we can distinguish left and right. */
+        if( data->right_phase >= TABLE_SIZE ) data->right_phase -= TABLE_SIZE;
 
-    /* *output++ = (float)(i) * sin(2 * M_PI * FREQUENCY * time_in_seconds + 0.0);   */
-    
-    /* left_phase = 1.0 * sin(2 * M_PI * 440.0 * time_in_seconds + 0.0); */
-    /* right_phase = 1.0 * sin(2 * M_PI * 440.0 * time_in_seconds - (M_PI)); */
-    /* *new_phase_output++ = left_phase; */
-    /* *new_phase_output++ = right_phase; */
-    
-    /* *new_output++ = (*output) + (float)(i + 100 * sin(2 * M_PI * (FREQUENCY * 2) * time_in_seconds + M_PI)); */
-
-    *output++ = 1.0 * sin(2 * M_PI * FREQUENCY * time_in_seconds + 0.0) + 2.0 * sin(2 * M_PI * (FREQUENCY * 2) * time_in_seconds + (M_PI/2)) + 50.0 * sin(2 * M_PI * (FREQUENCY * 3) * time_in_seconds - (M_PI/4));
-
-    data -> current_sample_index++;
-
-  }
+    }
 
   return paContinue;
   
@@ -63,17 +70,34 @@ static int my_Callback( const void *inputBuffer, void *outputBuffer,
 int main()
 {
 
+  my_data data;
+
   PaError error;
   PaStreamParameters outputParameters;
   PaDeviceIndex number_of_devices;
   const PaDeviceInfo *my_device;
 
-  my_data my_data_in_main =
+  int i;
+  int j;
+
+  for (i = 0; i < TABLE_SIZE; i++)
     {
-      .sample_rate = 44100,
-      .current_sample_index = 0,
-    };
+
+      data.sine_table[i] = (float) sin(((float) (i)/ (float) (TABLE_SIZE)) * M_PI * 2.0);
+    }
+
+  for (i = 0; i < TABLE_SIZE/2; i++)
+    {
+
+      for (j = 0; j < TABLE_SIZE/2; j++)
+	{
+
+	  data.sine_table[i] += data.sine_table[j];
+        }
+    }
   
+  data.left_phase = data.right_phase = 0;
+
   error = Pa_Initialize();
   if (error != paNoError) {
 
@@ -105,10 +129,10 @@ int main()
 			       2,
 			       2,
 			       paFloat32,
-			       my_data_in_main.sample_rate,
+			       SAMPLE_RATE,
 			       paFramesPerBufferUnspecified,
 			       my_Callback,
-			       &my_data_in_main);
+			       &data);
   
   if (error != paNoError) {
 
